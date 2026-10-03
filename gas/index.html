@@ -1,0 +1,37 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Multi-chain gas &amp; fee estimator (Ethereum, Base, Arbitrum, OP, Polygon, BNB, Avalanche, Bitcoin, Solana) | Blockchain Lab Tools</title><meta name="description" content="Live gas prices and transaction cost in USD across EVM chains, Bitcoin sat/vB and Solana priority fees, read directly from public RPCs."><link rel="canonical" href="https://blockchains.github.io/blockchainlab-tools/gas/">
+<meta property="og:title" content="Multi-chain gas &amp; fee estimator (Ethereum, Base, Arbitrum, OP, Polygon, BNB, Avalanche, Bitcoin, Solana) | Blockchain Lab Tools"><meta property="og:description" content="Live gas prices and transaction cost in USD across EVM chains, Bitcoin sat/vB and Solana priority fees, read directly from public RPCs."><meta property="og:image" content="https://blockchains.github.io/blockchainlab-tools/social-preview.png"><meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="../assets/app.css"><script type="importmap">{"imports":{"ethers":"https://cdn.jsdelivr.net/npm/ethers@6.13.4/+esm","@openzeppelin/merkle-tree":"https://esm.sh/@openzeppelin/merkle-tree@1.0.8"}}</script></head><body>
+<nav><div class="wrap"><a class="brand" href="../">Blockchain Lab Tools</a><a href="../gas/" class="on">Gas</a><a href="../units/" class="">Units</a><a href="../abi/" class="">ABI</a><a href="../address/" class="">Address/ENS</a><a href="../tx/" class="">Tx decoder</a><a href="../hash/" class="">Hash/Merkle</a><a href="../storage/" class="">Storage slots</a><a href="../reference/" class="">EIP/ERC/BIP</a><a href="../chains/" class="">Chainlist</a><a href="../tokens/" class="">Tokens</a></div></nav>
+<main class="wrap"><h1>Gas &amp; fee estimator</h1><p class="mut">Live from public RPCs (eth_feeHistory over the last 20 blocks), mempool.space and Solana RPC. USD prices from DefiLlama. L2 figures are the L2 execution fee only; rollups also charge an L1 data fee that varies with calldata size.</p>
+<div class="card"><div class="row"><div><label>Gas units (EVM)</label><input id="units" value="21000"></div><div><label>Preset</label><select id="preset"><option value="21000">Native transfer (21,000 gas)</option><option value="65000">ERC-20 transfer (~65,000, varies by token)</option><option value="180000">DEX swap (~180,000, varies)</option><option value="1000000">Contract deploy (1,000,000, varies)</option></select></div><div><label>Bitcoin tx size (vbytes)</label><input id="vb" value="141"></div></div><button id="go">Refresh</button></div>
+<div id="out" class="card"></div><div id="btc" class="card"></div><div id="sol" class="card"></div>
+<div class="card mut">Learn more on Blockchain Lab: <a href="https://blockchainlab.com/learn/concepts/rollup?utm_source=blockchainlab-tools&utm_medium=tool&utm_campaign=gas">Rollups</a> · <a href="https://blockchainlab.com/learn/compare/plasma-vs-rollups?utm_source=blockchainlab-tools&utm_medium=tool&utm_campaign=gas">Plasma vs rollups</a> · <a href="https://blockchainlab.com/intelligence/crypto-pulse?utm_source=blockchainlab-tools&utm_medium=tool&utm_campaign=gas">Crypto Pulse</a></div></main>
+<footer><div class="wrap">Built by Blockchain Lab — <a href="https://blockchainlab.com/?utm_source=blockchainlab-tools&utm_medium=tool&utm_campaign=gas">blockchainlab.com</a> · Runs entirely in your browser against public RPCs/APIs; nothing is sent to Blockchain Lab · <a href="https://github.com/Blockchains/blockchainlab-tools">Source</a> · <a href="https://blockchains.github.io/blockchainlab-api/">Open Data API</a> · Not financial advice.</div></footer>
+<script type="module">
+import * as C from "../assets/core.js"; import { $, esc, params, busy, fail, kv, table, json, on } from "../assets/ui.js";
+const fmtUsd = (n) => n < 0.01 ? "$" + n.toPrecision(2) : "$" + n.toFixed(n < 1 ? 4 : 2);
+$("#preset").onchange = () => { $("#units").value = $("#preset").value; run(); };
+async function run() {
+  const out = $("#out"); busy(out, "Querying 7 chains…");
+  try {
+    const keys = Object.keys(C.CHAINS); const units = BigInt($("#units").value || "21000");
+    const px = await C.prices([...keys.map(k => C.CHAINS[k].gecko), "bitcoin", "solana"]);
+    const res = await Promise.allSettled(keys.map(k => C.evmFees(k)));
+    const rows = res.map((r, i) => ({ k: keys[i], r }));
+    out.innerHTML = `<h3>EVM chains <span class="pill">${new Date().toLocaleTimeString()}</span></h3>` + table(rows, [
+      ["Chain", x => esc(C.CHAINS[x.k].name)],
+      ["Base fee (gwei)", x => x.r.status === "fulfilled" && x.r.value.baseFeeWei !== undefined ? C.ethers.formatUnits(x.r.value.baseFeeWei, "gwei") : x.r.status === "fulfilled" ? "n/a" : `<span class=err>${esc(x.r.reason?.message)}</span>`],
+      ["Priority tip p25 / p50 / p75 (gwei)", x => x.r.status === "fulfilled" && x.r.value.tipWei ? ["low","mid","high"].map(t => C.ethers.formatUnits(x.r.value.tipWei[t], "gwei")).join(" / ") : ""],
+      ["eth_gasPrice (gwei)", x => x.r.status === "fulfilled" ? C.ethers.formatUnits(x.r.value.gasPriceWei, "gwei") : ""],
+      [`Cost for ${units} gas`, x => { if (x.r.status !== "fulfilled") return ""; const c = C.feeCost(x.r.value, units); const nat = Number(C.ethers.formatEther(c.totalWei)); const p = px[C.CHAINS[x.k].gecko]; return `${nat.toPrecision(4)} ${C.CHAINS[x.k].symbol}` + (p ? ` ≈ <b>${fmtUsd(nat * p)}</b>` : ""); }],
+    ]) + `<p class="mut">Prices: ETH $${px.ethereum?.toFixed(2)}, POL $${px["polygon-ecosystem-token"]?.toFixed(4)}, BNB $${px.binancecoin?.toFixed(2)}, AVAX $${px["avalanche-2"]?.toFixed(2)} (<a href="https://defillama.com/docs/api">DefiLlama coins API</a>).</p>`;
+    const b = await C.btcFees(); const vb = Number($("#vb").value || 141);
+    $("#btc").innerHTML = `<h3>Bitcoin (sat/vB, mempool.space)</h3>` + table(Object.entries(b), [["Target", x => esc(x[0])], ["sat/vB", x => x[1]], [`Cost for ${vb} vB`, x => `${x[1] * vb} sats ≈ ${fmtUsd(x[1] * vb / 1e8 * px.bitcoin)}`]]);
+    const s = await C.solFees();
+    const sig = s.baseLamportsPerSignature / 1e9;
+    $("#sol").innerHTML = `<h3>Solana</h3>` + kv({ "Base fee": `5,000 lamports per signature = ${sig} SOL ≈ ${fmtUsd(sig * px.solana)} (<a href="https://solana.com/docs/core/fees">Solana docs</a>)`, "Priority fee p50 / p75 / p90 (micro-lamports per CU)": `${s.priorityMicroLamportsPerCU.p50} / ${s.priorityMicroLamportsPerCU.p75} / ${s.priorityMicroLamportsPerCU.p90}`, "Sample": `${s.samples} recent slots touching USDC / wSOL / Jupiter accounts (getRecentPrioritizationFees)`, "Example: 200,000 CU at p75": `${(s.priorityMicroLamportsPerCU.p75 * 200000 / 1e6 / 1e9 + sig).toPrecision(3)} SOL total` });
+  } catch (e) { fail(out, e); }
+}
+on("go", run); run();
+</script></body></html>

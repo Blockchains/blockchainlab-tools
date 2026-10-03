@@ -1,0 +1,8 @@
+{
+  "name": "blockchainlab-tools",
+  "private": true,
+  "type": "module",
+  "description": "Client-side blockchain developer tools. Built by Blockchain Lab — https://blockchainlab.com",
+  "scripts": { "test": "node test/core.test.mjs" },
+  "devDependencies": { "ethers": "6.13.4", "@openzeppelin/merkle-tree": "1.0.8" }
+}
