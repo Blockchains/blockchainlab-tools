@@ -36,7 +36,7 @@ const big = (h) => BigInt(h);
 // ---------- Prices (DefiLlama coins API) ----------
 export async function prices(ids) {
   const u = `https://coins.llama.fi/prices/current/${[...new Set(ids)].map(i => "coingecko:" + i).join(",")}`;
-  const j = await (await fetch(u)).json();
+  const j = await getJSON(u);
   const out = {}; for (const [k, v] of Object.entries(j.coins || {})) out[k.split(":")[1]] = v.price; return out;
 }
 
@@ -56,8 +56,12 @@ export function feeCost(f, gasUnits, tier = "mid") {
   const per = f.baseFeeWei !== undefined ? f.baseFeeWei + (f.tipWei?.[tier] ?? 0n) : f.gasPriceWei;
   return { perGasWei: per, totalWei: per * BigInt(gasUnits) };
 }
-export async function btcFees() { // sat/vB
-  return await (await fetch("https://mempool.space/api/v1/fees/recommended")).json();
+async function getJSON(url, tries = 3) {
+  let last; for (let i = 0; i < tries; i++) { try { const r = await fetch(url); if (!r.ok) throw new Error(`HTTP ${r.status} ${url}`); return await r.json(); } catch (e) { last = e; await new Promise(s => setTimeout(s, 600 * (i + 1))); } } throw last;
+}
+export async function btcFees() { // sat/vB — mempool.space, with Blockstream Esplora as fallback
+  try { return { ...(await getJSON("https://mempool.space/api/v1/fees/recommended")), source: "mempool.space" }; }
+  catch { const e = await getJSON("https://blockstream.info/api/fee-estimates"); const r = (n) => Math.ceil(e[n]); return { fastestFee: r("1"), halfHourFee: r("3"), hourFee: r("6"), economyFee: r("144"), minimumFee: Math.floor(e["1008"] || 1), source: "blockstream.info" }; }
 }
 // Fees are sampled over recent slots where these widely-used accounts were write-locked (USDC mint, wSOL mint, Jupiter v6 program).
 export const SOL_HOT_ACCOUNTS = ["EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v", "So11111111111111111111111111111111111111112", "JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4"];
