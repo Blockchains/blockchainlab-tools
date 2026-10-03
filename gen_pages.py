@@ -34,11 +34,11 @@ P["gas"] = ("Multi-chain gas & fee estimator (Ethereum, Base, Arbitrum, OP, Poly
 <div id="out" class="card"></div><div id="btc" class="card"></div><div id="sol" class="card"></div>''',
  '''const fmtUsd = (n) => n < 0.01 ? "$" + n.toPrecision(2) : "$" + n.toFixed(n < 1 ? 4 : 2);
 $("#preset").onchange = () => { $("#units").value = $("#preset").value; run(); };
-async function run() {
+let px = {};
+async function evm() {
   const out = $("#out"); busy(out, "Querying 7 chains…");
   try {
     const keys = Object.keys(C.CHAINS); const units = BigInt($("#units").value || "21000");
-    const px = await C.prices([...keys.map(k => C.CHAINS[k].gecko), "bitcoin", "solana"]);
     const res = await Promise.allSettled(keys.map(k => C.evmFees(k)));
     const rows = res.map((r, i) => ({ k: keys[i], r }));
     out.innerHTML = `<h3>EVM chains <span class="pill">${new Date().toLocaleTimeString()}</span></h3>` + table(rows, [
@@ -47,13 +47,24 @@ async function run() {
       ["Priority tip p25 / p50 / p75 (gwei)", x => x.r.status === "fulfilled" && x.r.value.tipWei ? ["low","mid","high"].map(t => C.ethers.formatUnits(x.r.value.tipWei[t], "gwei")).join(" / ") : ""],
       ["eth_gasPrice (gwei)", x => x.r.status === "fulfilled" ? C.ethers.formatUnits(x.r.value.gasPriceWei, "gwei") : ""],
       [`Cost for ${units} gas`, x => { if (x.r.status !== "fulfilled") return ""; const c = C.feeCost(x.r.value, units); const nat = Number(C.ethers.formatEther(c.totalWei)); const p = px[C.CHAINS[x.k].gecko]; return `${nat.toPrecision(4)} ${C.CHAINS[x.k].symbol}` + (p ? ` ≈ <b>${fmtUsd(nat * p)}</b>` : ""); }],
-    ]) + `<p class="mut">Prices: ETH $${px.ethereum?.toFixed(2)}, POL $${px["polygon-ecosystem-token"]?.toFixed(4)}, BNB $${px.binancecoin?.toFixed(2)}, AVAX $${px["avalanche-2"]?.toFixed(2)} (<a href="https://defillama.com/docs/api">DefiLlama coins API</a>).</p>`;
-    const b = await C.btcFees(); const vb = Number($("#vb").value || 141);
-    $("#btc").innerHTML = `<h3>Bitcoin (sat/vB, ${esc(b.source)})</h3>` + table(Object.entries(b).filter(x=>x[0]!=="source"), [["Target", x => esc(x[0])], ["sat/vB", x => x[1]], [`Cost for ${vb} vB`, x => `${x[1] * vb} sats ≈ ${fmtUsd(x[1] * vb / 1e8 * px.bitcoin)}`]]);
-    const s = await C.solFees();
-    const sig = s.baseLamportsPerSignature / 1e9;
-    $("#sol").innerHTML = `<h3>Solana</h3>` + kv({ "Base fee": `5,000 lamports per signature = ${sig} SOL ≈ ${fmtUsd(sig * px.solana)} (<a href="https://solana.com/docs/core/fees">Solana docs</a>)`, "Priority fee p50 / p75 / p90 (micro-lamports per CU)": `${s.priorityMicroLamportsPerCU.p50} / ${s.priorityMicroLamportsPerCU.p75} / ${s.priorityMicroLamportsPerCU.p90}`, "Sample": `${s.samples} recent slots touching USDC / wSOL / Jupiter accounts (getRecentPrioritizationFees)`, "Example: 200,000 CU at p75": `${(s.priorityMicroLamportsPerCU.p75 * 200000 / 1e6 / 1e9 + sig).toPrecision(3)} SOL total` });
+    ]) + (px.ethereum ? `<p class="mut">Prices: ETH $${px.ethereum?.toFixed(2)}, POL $${px["polygon-ecosystem-token"]?.toFixed(4)}, BNB $${px.binancecoin?.toFixed(2)}, AVAX $${px["avalanche-2"]?.toFixed(2)} (<a href="https://defillama.com/docs/api">DefiLlama coins API</a>).</p>` : `<p class="err">USD prices unavailable right now (DefiLlama); native-token costs shown.</p>`);
   } catch (e) { fail(out, e); }
+}
+async function btc() {
+  const el = $("#btc"); busy(el, "Querying Bitcoin fee rates…");
+  try { const b = await C.btcFees(); const vb = Number($("#vb").value || 141);
+    el.innerHTML = `<h3>Bitcoin (sat/vB, ${esc(b.source)})</h3>` + table(Object.entries(b).filter(x=>x[0]!=="source"), [["Target", x => esc(x[0])], ["sat/vB", x => x[1]], [`Cost for ${vb} vB`, x => `${x[1] * vb} sats` + (px.bitcoin ? ` ≈ ${fmtUsd(x[1] * vb / 1e8 * px.bitcoin)}` : "")]]);
+  } catch (e) { fail(el, e); }
+}
+async function sol() {
+  const el = $("#sol"); busy(el, "Querying Solana priority fees…");
+  try { const s = await C.solFees(); const sig = s.baseLamportsPerSignature / 1e9;
+    el.innerHTML = `<h3>Solana</h3>` + kv({ "Base fee": `5,000 lamports per signature = ${sig} SOL` + (px.solana ? ` ≈ ${fmtUsd(sig * px.solana)}` : "") + ` (<a href="https://solana.com/docs/core/fees">Solana docs</a>)`, "Priority fee p50 / p75 / p90 (micro-lamports per CU)": `${s.priorityMicroLamportsPerCU.p50} / ${s.priorityMicroLamportsPerCU.p75} / ${s.priorityMicroLamportsPerCU.p90}`, "Sample": `${s.samples} recent slots touching USDC / wSOL / Jupiter accounts (getRecentPrioritizationFees)`, "Example: 200,000 CU at p75": `${(s.priorityMicroLamportsPerCU.p75 * 200000 / 1e6 / 1e9 + sig).toPrecision(3)} SOL total` });
+  } catch (e) { fail(el, e); }
+}
+async function run() {
+  px = await C.prices([...Object.values(C.CHAINS).map(c => c.gecko), "bitcoin", "solana"]).catch(() => ({}));
+  await Promise.allSettled([evm(), btc(), sol()]);
 }
 on("go", run); run();''')
 

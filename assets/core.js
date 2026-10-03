@@ -3,6 +3,8 @@
 import { ethers } from "ethers";
 import { StandardMerkleTree, SimpleMerkleTree } from "@openzeppelin/merkle-tree";
 
+// fetch with a timeout so one slow public endpoint never hangs a tool
+export function tfetch(url, opts = {}, ms = 12000) { return fetch(url, { ...opts, signal: AbortSignal.timeout(ms) }); }
 export const API = "https://blockchains.github.io/blockchainlab-api/v1";
 export const SITE = "https://blockchainlab.com";
 export const utm = (path, tool) => `${SITE}${path}${path.includes("?") ? "&" : "?"}utm_source=blockchainlab-tools&utm_medium=tool&utm_campaign=${tool}`;
@@ -23,7 +25,7 @@ export async function rpc(chain, method, params = []) {
   let last;
   for (const url of c.rpcs) {
     try {
-      const r = await fetch(url, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }) });
+      const r = await tfetch(url, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }) });
       const j = await r.json();
       if (j.error) throw new Error(j.error.message || JSON.stringify(j.error));
       return j.result;
@@ -57,16 +59,22 @@ export function feeCost(f, gasUnits, tier = "mid") {
   return { perGasWei: per, totalWei: per * BigInt(gasUnits) };
 }
 async function getJSON(url, tries = 3) {
-  let last; for (let i = 0; i < tries; i++) { try { const r = await fetch(url); if (!r.ok) throw new Error(`HTTP ${r.status} ${url}`); return await r.json(); } catch (e) { last = e; await new Promise(s => setTimeout(s, 600 * (i + 1))); } } throw last;
+  let last; for (let i = 0; i < tries; i++) { try { const r = await tfetch(url, {}, 8000); if (!r.ok) throw new Error(`HTTP ${r.status} ${url}`); return await r.json(); } catch (e) { last = e; await new Promise(s => setTimeout(s, 600 * (i + 1))); } } throw last;
 }
-export async function btcFees() { // sat/vB — mempool.space, with Blockstream Esplora as fallback
-  try { return { ...(await getJSON("https://mempool.space/api/v1/fees/recommended")), source: "mempool.space" }; }
-  catch { const e = await getJSON("https://blockstream.info/api/fee-estimates"); const r = (n) => Math.ceil(e[n]); return { fastestFee: r("1"), halfHourFee: r("3"), hourFee: r("6"), economyFee: r("144"), minimumFee: Math.floor(e["1008"] || 1), source: "blockstream.info" }; }
+export async function btcFees() { // sat/vB — mempool.space, then Bitcoin Core estimatesmartfee (PublicNode), then Blockstream Esplora
+  try { return { ...(await getJSON("https://mempool.space/api/v1/fees/recommended", 2)), source: "mempool.space" }; } catch {}
+  try {
+    const est = async (n) => { const r = await tfetch("https://bitcoin-rpc.publicnode.com", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ jsonrpc: "1.0", id: 1, method: "estimatesmartfee", params: [n] }) }, 8000); const j = await r.json(); if (!j.result?.feerate) throw new Error("no estimate"); return Math.max(1, Math.round(j.result.feerate * 1e5)); };
+    const [f, h, o, e] = await Promise.all([est(1), est(3), est(6), est(144)]);
+    return { fastestFee: f, halfHourFee: h, hourFee: o, economyFee: e, minimumFee: 1, source: "Bitcoin Core estimatesmartfee via PublicNode" };
+  } catch {}
+  const e = await getJSON("https://blockstream.info/api/fee-estimates", 2); const r = (n) => Math.ceil(e[n]);
+  return { fastestFee: r("1"), halfHourFee: r("3"), hourFee: r("6"), economyFee: r("144"), minimumFee: Math.floor(e["1008"] || 1), source: "blockstream.info" };
 }
 // Fees are sampled over recent slots where these widely-used accounts were write-locked (USDC mint, wSOL mint, Jupiter v6 program).
 export const SOL_HOT_ACCOUNTS = ["EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v", "So11111111111111111111111111111111111111112", "JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4"];
 export async function solFees() {
-  const r = await fetch("https://solana-rpc.publicnode.com", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "getRecentPrioritizationFees", params: [SOL_HOT_ACCOUNTS] }) });
+  const r = await tfetch("https://solana-rpc.publicnode.com", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "getRecentPrioritizationFees", params: [SOL_HOT_ACCOUNTS] }) });
   const arr = ((await r.json()).result || []).map(x => x.prioritizationFee).sort((a, b) => a - b);
   const pct = (p) => arr.length ? arr[Math.min(arr.length - 1, Math.floor(arr.length * p))] : 0;
   return { baseLamportsPerSignature: 5000, priorityMicroLamportsPerCU: { p50: pct(0.5), p75: pct(0.75), p90: pct(0.9) }, samples: arr.length };
@@ -100,12 +108,12 @@ export function encodeCall(sig, args) {
 export async function lookupSelector(sel) {
   sel = sel.slice(0, 10).toLowerCase();
   const out = new Set();
-  try { const j = await (await fetch(`https://api.openchain.xyz/signature-database/v1/lookup?function=${sel}&filter=true`)).json(); (j.result?.function?.[sel] || []).forEach(x => out.add(x.name)); } catch {}
-  if (!out.size) { try { const j = await (await fetch(`https://www.4byte.directory/api/v1/signatures/?hex_signature=${sel}&ordering=created_at`)).json(); (j.results || []).forEach(x => out.add(x.text_signature)); } catch {} }
+  try { const j = await (await tfetch(`https://api.openchain.xyz/signature-database/v1/lookup?function=${sel}&filter=true`)).json(); (j.result?.function?.[sel] || []).forEach(x => out.add(x.name)); } catch {}
+  if (!out.size) { try { const j = await (await tfetch(`https://www.4byte.directory/api/v1/signatures/?hex_signature=${sel}&ordering=created_at`)).json(); (j.results || []).forEach(x => out.add(x.text_signature)); } catch {} }
   return [...out];
 }
 export async function lookupEvent(topic0) {
-  try { const j = await (await fetch(`https://api.openchain.xyz/signature-database/v1/lookup?event=${topic0}&filter=true`)).json(); return (j.result?.event?.[topic0] || []).map(x => x.name); } catch { return []; }
+  try { const j = await (await tfetch(`https://api.openchain.xyz/signature-database/v1/lookup?event=${topic0}&filter=true`)).json(); return (j.result?.event?.[topic0] || []).map(x => x.name); } catch { return []; }
 }
 const fmtArg = (v) => typeof v === "bigint" ? v.toString() : Array.isArray(v) ? v.map(fmtArg) : (v && typeof v.toArray === "function") ? v.toArray().map(fmtArg) : v;
 export async function decodeCalldata(data, sigHint) {
@@ -226,6 +234,6 @@ export async function readSlot(chain, address, slot) { return await rpc(chain, "
 
 // ---------- Data API helpers ----------
 const _cache = {};
-export async function dataset(name) { return _cache[name] ||= (await fetch(`${API}/${name}.json`)).json(); }
-export async function tokenList() { return _cache.tokens ||= (await fetch("https://tokens.uniswap.org")).json(); }
+export async function dataset(name) { return _cache[name] ||= (await tfetch(`${API}/${name}.json`)).json(); }
+export async function tokenList() { return _cache.tokens ||= (await tfetch("https://tokens.uniswap.org")).json(); }
 export { ethers };

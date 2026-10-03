@@ -18,8 +18,13 @@ with sync_playwright() as p:
     def home():
         go("/"); assert pg.locator(".grid a.card").count() == 10
     def gas():
-        go("/gas/"); pg.wait_for_selector("#sol h3", timeout=45000); t = noerr("main"); assert "Ethereum" in t and "Avalanche" in t and "sat/vB" in t and "≈ $" in t, t[:400]
-        assert t.count("err") == 0 or True
+        last = None
+        for attempt in range(2):  # one retry: public endpoints occasionally rate-limit
+            try:
+                go("/gas/"); pg.wait_for_selector("#out h3", timeout=45000); pg.wait_for_selector("#btc h3", timeout=45000); pg.wait_for_selector("#sol h3", timeout=45000)
+                t = noerr("main"); assert "Ethereum" in t and "Avalanche" in t and "sat/vB" in t and "≈ $" in t, t[:400]; return
+            except Exception as e: last = e
+        raise last
     def units():
         go("/units/?v=1.5&u=ether"); pg.wait_for_selector("#out table"); t = noerr("#out"); assert "1500000000000000000" in t and "1500000000" in t
     def abi():
