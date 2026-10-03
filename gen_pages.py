@@ -114,7 +114,7 @@ if(params.get("chain"))$("#chain").value=params.get("chain");if(params.get("hash
 P["hash"] = ("Keccak-256, SHA-256 hasher & OpenZeppelin Merkle tree builder | Blockchain Lab Tools",
  "Hash text or hex with keccak256, sha256 and ripemd160, and build OpenZeppelin-compatible Merkle trees (StandardMerkleTree / SimpleMerkleTree) with root and proofs for airdrops and allowlists.",
  "Hashing & Merkle trees", "Merkle trees use the official <a href='https://github.com/OpenZeppelin/merkle-tree'>@openzeppelin/merkle-tree</a> library, so roots and proofs verify with OpenZeppelin's MerkleProof.sol.",
- [("/learn/concepts/hash","Hashes"),("/learn/concepts/merkle-tree","Merkle trees"),("/whitepaper/bitcoin","Bitcoin whitepaper")],
+ [("/learn/concepts/hash","Hashes"),("/learn/concepts/merkle-tree","Merkle trees"),("/research/corpus/papers/bitcoin","Bitcoin whitepaper")],
  '''<div class="card"><h3>Hash</h3><div class="row"><div style="grid-column:span 2"><label>Input</label><input id="hin" value="hello"></div><div><label>Interpret as</label><select id="hmode"><option value="text">UTF-8 text</option><option value="hex">Hex bytes</option></select></div></div><div id="hout"></div></div>
 <div class="card"><h3>Merkle tree</h3><div class="row"><div><label>Mode</label><select id="mmode"><option value="standard">StandardMerkleTree (abi-encoded rows)</option><option value="simple">SimpleMerkleTree (bytes32 leaves)</option></select></div><div><label>Leaf types (standard mode)</label><input id="mtypes" value="address,uint256"></div></div>
 <label>Rows — one per line, comma-separated values (standard) or one bytes32 per line (simple)</label><textarea id="mrows">0x1111111111111111111111111111111111111111,5000000000000000000
