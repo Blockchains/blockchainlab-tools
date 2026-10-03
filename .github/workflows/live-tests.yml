@@ -17,6 +17,6 @@ jobs:
     needs: core
     steps:
       - uses: actions/checkout@v4
-      - run: pip install playwright==1.47.0
+      - run: pip install playwright==1.63.0 && python -m playwright install chromium
       - name: Browser tests against the live Pages site
         run: python3 test/e2e.py https://blockchains.github.io/blockchainlab-tools
