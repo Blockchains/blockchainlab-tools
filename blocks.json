@@ -1,0 +1,138 @@
+{
+  "$schema": "https://raw.githubusercontent.com/Blockchains/.github/main/docs/blocks.schema.json",
+  "schema_version": "1.0",
+  "name": "blockchainlab-tools",
+  "repo": "Blockchains/blockchainlab-tools",
+  "summary": "26 client-side blockchain developer tools (gas, units, ABI, tx decoder, ENS, storage slots, Merkle, Safe, EIP-712, approvals, MEV, Solana, PSBT...) as static pages with deep links, plus the shared ES-module logic (`assets/core.js`, `assets/core2.js`) usable from Node or the browser.",
+  "kind": [
+    "web-app",
+    "library"
+  ],
+  "stability": "stable",
+  "license": "MIT",
+  "homepage": "https://blockchains.github.io/blockchainlab-tools/",
+  "entrypoints": [
+    {
+      "type": "web",
+      "name": "tool deep links",
+      "ref": "https://blockchains.github.io/blockchainlab-tools/<tool>/",
+      "usage": "https://blockchains.github.io/blockchainlab-tools/tx/?chain=base&hash=0x…"
+    },
+    {
+      "type": "file",
+      "name": "assets/core.js",
+      "ref": "assets/core.js",
+      "usage": "git clone + npm install, then import * as C from './assets/core.js'",
+      "exports": [
+        "convertUnits",
+        "selector",
+        "topic",
+        "encodeCall",
+        "decodeCalldata",
+        "decodeTx",
+        "evmFees",
+        "btcFees",
+        "solFees",
+        "resolveEns",
+        "reverseEns",
+        "addressInfo",
+        "erc20Meta",
+        "readSlot",
+        "mappingSlot",
+        "erc7201Slot",
+        "merkleStandard",
+        "merkleSimple",
+        "hashes",
+        "dataset",
+        "CHAINS"
+      ]
+    },
+    {
+      "type": "file",
+      "name": "assets/core2.js",
+      "ref": "assets/core2.js",
+      "exports": [
+        "multicall",
+        "safeTxHash",
+        "safeInfo",
+        "decodeSafeCalldata",
+        "typedDataHash",
+        "recoverTypedData",
+        "erc1271",
+        "calldataDiff",
+        "verification",
+        "gasHistory",
+        "bridgeQuotes",
+        "approvals",
+        "ensBulk",
+        "decodeSolTx",
+        "decodePSBT",
+        "addressLabels",
+        "priceImpact",
+        "sandwichCheck",
+        "stablecoins",
+        "rpcHealth",
+        "create2Address"
+      ]
+    }
+  ],
+  "inputs": [
+    {
+      "name": "query params",
+      "type": "URL",
+      "description": "chain, hash, address/q, data, v/u depending on the tool"
+    },
+    {
+      "name": "function args",
+      "type": "JS",
+      "description": "addresses, hashes, calldata, chain keys"
+    }
+  ],
+  "outputs": [
+    {
+      "name": "rendered tool page",
+      "type": "HTML"
+    },
+    {
+      "name": "JS results",
+      "type": "objects",
+      "description": "decoded calls, fees in wei/USD, slots, hashes"
+    }
+  ],
+  "deps": [
+    "browser (ES modules + import map)",
+    "node>=18 with ethers 6.13.4 and @openzeppelin/merkle-tree for Node use"
+  ],
+  "compatible_with": [
+    {
+      "repo": "Blockchains/blockchainlab-mcp",
+      "how": "the MCP server wraps the same logic as agent tools"
+    },
+    {
+      "repo": "Blockchains/blockchainlab-lens",
+      "how": "the extension opens these pages for explorer tx/address URLs"
+    },
+    {
+      "repo": "Blockchains/blockchainlab-api",
+      "how": "chains and EIP/ERC/BIP reference data"
+    },
+    {
+      "repo": "Blockchains/blockchain-dev-roadmap",
+      "how": "roadmap stages link to the tools"
+    },
+    {
+      "repo": "Blockchains/blockchains.github.io",
+      "how": "listed on the hub"
+    }
+  ],
+  "tests": {
+    "command": "npm install && npm test",
+    "ci": ".github/workflows/live-tests.yml",
+    "network": true
+  },
+  "docs": {
+    "readme": "README.md",
+    "agents": "AGENTS.md",
+    "llms": "llms.txt"
+  }
+}

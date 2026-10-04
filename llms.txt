@@ -1,0 +1,25 @@
+# blockchainlab-tools
+
+> 26 client-side blockchain developer tools (gas, units, ABI, tx decoder, ENS, storage slots, Merkle, Safe, EIP-712, approvals, MEV, Solana, PSBT...) as static pages with deep links, plus the shared ES-module logic (`assets/core.js`, `assets/core2.js`) usable from Node or the browser.
+
+## Docs
+
+- [README](https://raw.githubusercontent.com/Blockchains/blockchainlab-tools/main/README.md): overview, install and the 'Use as a building block' section
+- [AGENTS.md](https://raw.githubusercontent.com/Blockchains/blockchainlab-tools/main/AGENTS.md): setup, build/test commands, structure map, conventions and rules for AI coding agents
+- [blocks.json](https://raw.githubusercontent.com/Blockchains/blockchainlab-tools/main/blocks.json): machine-readable building-block manifest (entrypoints, inputs, outputs, deps, compatible blocks)
+
+## Key files
+
+- [assets/core.js](https://github.com/Blockchains/blockchainlab-tools/blob/main/assets/core.js): shared logic 1
+- [assets/core2.js](https://github.com/Blockchains/blockchainlab-tools/blob/main/assets/core2.js): shared logic 2
+- [gen_pages.py](https://github.com/Blockchains/blockchainlab-tools/blob/main/gen_pages.py): page generator
+
+## Related
+
+- [Build with Blocks](https://github.com/Blockchains/.github/blob/main/docs/BUILD-WITH-BLOCKS.md): how to assemble projects from Blockchains repos
+- [Org llms.txt](https://blockchains.github.io/llms.txt) · [blocks catalogue](https://blockchains.github.io/blocks.json)
+- [Blockchains/blockchainlab-mcp](https://github.com/Blockchains/blockchainlab-mcp): the MCP server wraps the same logic as agent tools
+- [Blockchains/blockchainlab-lens](https://github.com/Blockchains/blockchainlab-lens): the extension opens these pages for explorer tx/address URLs
+- [Blockchains/blockchainlab-api](https://github.com/Blockchains/blockchainlab-api): chains and EIP/ERC/BIP reference data
+- [Blockchains/blockchain-dev-roadmap](https://github.com/Blockchains/blockchain-dev-roadmap): roadmap stages link to the tools
+- [Blockchains/blockchains.github.io](https://github.com/Blockchains/blockchains.github.io): listed on the hub

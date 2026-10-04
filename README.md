@@ -93,6 +93,50 @@ Plain HTML + ES modules, ethers v6 and @openzeppelin/merkle-tree via import map 
 
 MIT licensed. Not financial advice.
 
+<!-- blocks:start -->
+## Use as a building block
+
+> **For AI agents and builders:** read [`AGENTS.md`](AGENTS.md) (setup, commands, structure, rules), [`llms.txt`](llms.txt) (doc map) and the machine-readable [`blocks.json`](blocks.json) ([schema](https://github.com/Blockchains/.github/blob/main/docs/BLOCKS-SCHEMA.md)). How all Blockchains blocks fit together: **[Build with Blocks](https://github.com/Blockchains/.github/blob/main/docs/BUILD-WITH-BLOCKS.md)** · org catalogue: [https://blockchains.github.io/blocks.json](https://blockchains.github.io/blocks.json).
+
+**What it exports**
+
+| Export | Type | Install / access |
+|---|---|---|
+| `tool deep links` | web | `https://blockchains.github.io/blockchainlab-tools/tx/?chain=base&hash=0x…` |
+| `assets/core.js` | file | `git clone + npm install, then import * as C from './assets/core.js'` |
+| `assets/core2.js` | file | `assets/core2.js` |
+
+`assets/core.js` exports: `convertUnits`, `selector`, `topic`, `encodeCall`, `decodeCalldata`, `decodeTx`, `evmFees`, `btcFees`, `solFees`, `resolveEns`, `reverseEns`, `addressInfo`, `erc20Meta`, `readSlot`, `mappingSlot`, `erc7201Slot`, `merkleStandard`, `merkleSimple`, `hashes`, `dataset`, `CHAINS`
+
+`assets/core2.js` exports: `multicall`, `safeTxHash`, `safeInfo`, `decodeSafeCalldata`, `typedDataHash`, `recoverTypedData`, `erc1271`, `calldataDiff`, `verification`, `gasHistory`, `bridgeQuotes`, `approvals`, `ensBulk`, `decodeSolTx`, `decodePSBT`, `addressLabels`, `priceImpact`, `sandwichCheck`, `stablecoins`, `rpcHealth`, `create2Address`
+
+**Minimal example** (run on 2026-10-04 from a clone after `npm install` (Node 20))
+
+```js
+// node --input-type=module, from the repo root
+import * as C from "./assets/core.js";
+C.convertUnits("1.5", "ether").wei;              // "1500000000000000000"
+C.selector("transfer(address,uint256)");         // "0xa9059cbb"
+C.erc7201Slot("example.main");                   // 0x183a6125…eab500 (ERC-7201 spec vector)
+await C.evmFees("base");                         // { chain, gasPriceWei, baseFeeWei, tipWei, oldestBlock }
+```
+
+**Inputs → outputs**
+
+- In: `query params` (URL) chain, hash, address/q, data, v/u depending on the tool; `function args` (JS) addresses, hashes, calldata, chain keys
+- Out: `rendered tool page` (HTML); `JS results` (objects) decoded calls, fees in wei/USD, slots, hashes
+
+**Composes with**
+
+- [Blockchains/blockchainlab-mcp](https://github.com/Blockchains/blockchainlab-mcp): the MCP server wraps the same logic as agent tools
+- [Blockchains/blockchainlab-lens](https://github.com/Blockchains/blockchainlab-lens): the extension opens these pages for explorer tx/address URLs
+- [Blockchains/blockchainlab-api](https://github.com/Blockchains/blockchainlab-api): chains and EIP/ERC/BIP reference data
+- [Blockchains/blockchain-dev-roadmap](https://github.com/Blockchains/blockchain-dev-roadmap): roadmap stages link to the tools
+- [Blockchains/blockchains.github.io](https://github.com/Blockchains/blockchains.github.io): listed on the hub
+
+**Versioning & stability:** `stable`. Deep-link URLs (`/<tool>/?chain=…&hash=…`) are treated as a stable interface (Lens and the MCP server depend on them). `assets/core*.js` is internal-but-reusable: no npm package, so vendor a pinned commit.
+<!-- blocks:end -->
+
 ## Configuration
 
 None. Every tool runs in the browser against public RPCs and public APIs; no keys, no backend.
