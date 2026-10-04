@@ -76,6 +76,11 @@ npm install && npm test          # Node: units, ABI, ENS, fees on 7 chains, real
 pip install playwright && python3 test/e2e.py   # headless Chrome against the live Pages site, every tool
 ```
 
+What the suites check:
+
+- `npm test` runs `test/core.test.mjs` (pack 1) and `test/core2.test.mjs` (pack 2, 16 groups): Safe hash computed locally == the Safe's own `getTransactionHash()` on a Safe freshly discovered from factory logs; EIP-712 spec "Mail" digest + signer vector; Sourcify/Blockscout verification of USDC; 1,024-block fee history; live Across/LI.FI/Relay quotes; Permit2 allowance via Multicall3 == direct `allowance()`; ENS bulk; a live Jupiter Solana tx; the official BIP-174 PSBT vector + a self-built, signed P2WPKH tx; OFAC-list hit; EIP-1014 CREATE2 vector; Uniswap v3 QuoterV2 vs `slot0`; a real jaredfromsubway sandwich (block 26119673); DefiLlama stablecoins; public RPC health.
+- `python3 test/e2e.py [base]` drives every page in headless Chrome (27 checks) — run daily in CI against the live Pages site.
+
 CI runs both on every push and daily ([live-tests.yml](.github/workflows/live-tests.yml)).
 
 ## Develop
@@ -88,10 +93,13 @@ Plain HTML + ES modules, ethers v6 and @openzeppelin/merkle-tree via import map 
 
 MIT licensed. Not financial advice.
 
+## Configuration
+
+None. Every tool runs in the browser against public RPCs and public APIs; no keys, no backend.
+
+## Contributing
+
+Issues and pull requests are welcome. Please read the [contributing guide](https://github.com/Blockchains/.github/blob/main/CONTRIBUTING.md), [code of conduct](https://github.com/Blockchains/.github/blob/main/CODE_OF_CONDUCT.md) and [security policy](https://github.com/Blockchains/.github/blob/main/SECURITY.md) first.
+
 ---
 Built by Blockchain Lab — [blockchainlab.com](https://blockchainlab.com/?utm_source=github&utm_medium=readme&utm_campaign=blockchainlab-tools)
-
-## Tests (real network, no mocks)
-
-- `npm test` runs `test/core.test.mjs` (pack 1) and `test/core2.test.mjs` (pack 2, 16 groups): Safe hash computed locally == the Safe's own `getTransactionHash()` on a Safe freshly discovered from factory logs; EIP-712 spec "Mail" digest + signer vector; Sourcify/Blockscout verification of USDC; 1,024-block fee history; live Across/LI.FI/Relay quotes; Permit2 allowance via Multicall3 == direct `allowance()`; ENS bulk; a live Jupiter Solana tx; the official BIP-174 PSBT vector + a self-built, signed P2WPKH tx; OFAC-list hit; EIP-1014 CREATE2 vector; Uniswap v3 QuoterV2 vs `slot0`; a real jaredfromsubway sandwich (block 26119673); DefiLlama stablecoins; public RPC health.
-- `python3 test/e2e.py [base]` drives every page in headless Chrome (27 checks) — run daily in CI against the live Pages site.
