@@ -1,12 +1,16 @@
 # Generates the static tool pages. Run: python3 gen_pages.py
-import os, html
+import os, html, sys
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from gen_pages2 import P2
 BASE = "https://blockchains.github.io/blockchainlab-tools"
 def U(path, c): return f"https://blockchainlab.com{path}?utm_source=blockchainlab-tools&utm_medium=tool&utm_campaign={c}"
 NAV = [("gas","Gas"),("units","Units"),("abi","ABI"),("address","Address/ENS"),("tx","Tx decoder"),("hash","Hash/Merkle"),("storage","Storage slots"),("reference","EIP/ERC/BIP"),("chains","Chainlist"),("tokens","Tokens")]
-IMPORTMAP = '''<script type="importmap">{"imports":{"ethers":"https://cdn.jsdelivr.net/npm/ethers@6.13.4/+esm","@openzeppelin/merkle-tree":"https://esm.sh/@openzeppelin/merkle-tree@1.0.8"}}</script>'''
+IMPORTMAP = '''<script type="importmap">{"imports":{"ethers":"https://cdn.jsdelivr.net/npm/ethers@6.13.4/+esm","@openzeppelin/merkle-tree":"https://esm.sh/@openzeppelin/merkle-tree@1.0.8","@scure/btc-signer":"https://esm.sh/@scure/btc-signer@2.0.1","@scure/base":"https://esm.sh/@scure/base@2.0.0"}}</script>'''
+NAV2 = [("safe","Safe multisig"),("eip712","EIP-712"),("calldiff","Calldata diff"),("verify","Verification"),("gas-history","Gas history"),("bridge","Bridge fees"),("approvals","Approvals"),("ens-bulk","ENS bulk"),("solana-tx","Solana tx"),("psbt","Bitcoin PSBT"),("labels","Address labels"),("vanity","Vanity/CREATE2"),("price-impact","Price impact"),("mev","MEV sandwich"),("stablecoins","Stablecoins"),("rpc-health","RPC health")]
+ALLNAV = NAV + NAV2
 def page(slug, title, desc, h1, lede, bl, body, script, depth=1):
     pre = "../" * depth if slug else "./"
-    nav = "".join(f'<a href="{pre}{s}/" class="{"on" if s==slug else ""}">{n}</a>' for s,n in NAV)
+    nav = "".join(f'<a href="{pre}{s}/" class="{"on" if s==slug else ""}">{n}</a>' for s,n in NAV[:6]) + '<select aria-label="All tools" onchange="location.href=this.value" style="width:auto;padding:4px 8px">' + f'<option value="">All {len(ALLNAV)} tools…</option>' + "".join(f'<option value="{pre}{s}/"{" selected" if s==slug else ""}>{n}</option>' for s,n in ALLNAV) + '</select><a href="https://blockchains.github.io/">Hub</a>'
     bllinks = " · ".join(f'<a href="{U(p,slug or "home")}">{html.escape(l)}</a>' for p,l in bl)
     canon = f"{BASE}/{slug+'/' if slug else ''}"
     return f'''<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
@@ -19,7 +23,7 @@ def page(slug, title, desc, h1, lede, bl, body, script, depth=1):
 <div class="card mut">Learn more on Blockchain Lab: {bllinks}</div></main>
 <footer><div class="wrap">Built by Blockchain Lab — <a href="{U('/', slug or 'home')}">blockchainlab.com</a> · Runs entirely in your browser against public RPCs/APIs; nothing is sent to Blockchain Lab · <a href="https://github.com/Blockchains/blockchainlab-tools">Source</a> · <a href="https://blockchains.github.io/blockchainlab-api/">Open Data API</a> · Not financial advice.</div></footer>
 <script type="module">
-import * as C from "{pre}assets/core.js"; import {{ $, esc, params, busy, fail, kv, table, json, on }} from "{pre}assets/ui.js";
+import * as C from "{pre}assets/core.js"; {'import * as D from "'+pre+'assets/core2.js"; ' if slug in P2 else ''}import {{ $, esc, params, busy, fail, kv, table, json, on }} from "{pre}assets/ui.js";
 {script}
 </script></body></html>'''
 
@@ -195,21 +199,28 @@ o.addEventListener("click",e=>{if(e.target.dataset.a){$("#vc").value=e.target.da
 on("vgo",async()=>{const v=$("#vout");busy(v);try{const m=await C.erc20Meta($("#vc").value,$("#va").value.trim());v.innerHTML=kv({Name:esc(m.name),Symbol:esc(m.symbol),Decimals:m.decimals,"Total supply":m.totalSupply});}catch(e){fail(v,e)}});
 $("#q").oninput=render;''')
 
+P.update(P2)
 for slug,(title,desc,h1,lede,bl,body,script) in P.items():
     os.makedirs(slug, exist_ok=True)
     open(f"{slug}/index.html","w").write(page(slug,title,desc,h1,lede,bl,body,script))
 
 # home
 cards = "".join(f'<a class="card" href="{s}/"><b>{P[s][2]}</b><p class="mut">{html.escape(P[s][1])}</p></a>' for s,_ in NAV)
-home_body = f'''<div class="grid">{cards}</div>
+cards2 = "".join(f'<a class="card" href="{s}/"><b>{P[s][2]}</b> <span class="pill">new</span><p class="mut">{html.escape(P[s][1])}</p></a>' for s,_ in NAV2)
+home_body = f'''<input id="tq" placeholder="Filter {len(ALLNAV)} tools… (e.g. safe, solana, gas)" oninput="for(const a of document.querySelectorAll('.grid a.card'))a.style.display=a.textContent.toLowerCase().includes(this.value.toLowerCase())?'':'none'" style="margin:8px 0 4px">
+<h2>Security, wallets &amp; multichain</h2><div class="grid">{cards2}</div><h2>Core developer tools</h2><div class="grid">{cards}</div>
 <div class="card"><h3>More from Blockchain Lab</h3><ul>
 <li><a href="https://blockchains.github.io/blockchainlab-api/">Open Data API</a> — free JSON: chains, DeFi TVL, EIPs/ERCs/BIPs, grants, hackathons, 600+ whitepapers</li>
 <li><a href="https://github.com/Blockchains/blockchainlab-mcp">blockchainlab-mcp</a> — let Cursor / Claude / Grok agents query these tools and datasets</li>
 <li><a href="https://github.com/Blockchains/blockchainlab-lens">blockchainlab-lens</a> — explain any Etherscan address or tx in one click</li>
 <li><a href="https://github.com/Blockchains/blockchainlab-labs">blockchainlab-labs</a> — 30 hands-on Foundry labs · <a href="https://github.com/Blockchains/blockchain-dev-roadmap">developer roadmap</a> · <a href="https://github.com/Blockchains/blockchain-interview-questions">interview questions</a></li>
 <li><a href="https://github.com/Blockchains/hackathons">Hackathons tracker</a> · <a href="https://github.com/Blockchains/blockchainlab-feeds">feeds</a> · <a href="https://github.com/Blockchains/whitepapers">whitepapers repo</a></li></ul></div>'''
-open("index.html","w").write(page("", "Blockchain Lab Tools — free client-side blockchain developer tools (gas, ABI, tx decoder, ENS, Merkle, storage slots)",
- "Free, open-source, no-backend blockchain developer tools: multi-chain gas estimator, unit converter, ABI encoder/decoder, tx decoder, ENS resolver, Merkle tree builder, storage-slot calculator, EIP/ERC/BIP reference, chainlist and token lookup.",
+open("index.html","w").write(page("", f"Blockchain Lab Tools — {len(ALLNAV)} free client-side blockchain developer tools (Safe, EIP-712, gas, bridges, approvals, Solana, PSBT, MEV)",
+ "Free, open-source, no-backend blockchain developer tools: Safe multisig tx builder, EIP-712 signer, calldata diff, contract verification, gas history, bridge fee compare, token approvals & revoke, ENS bulk, Solana tx decoder, Bitcoin PSBT decoder, address labels, vanity/CREATE2, Uniswap price impact, MEV sandwich checker, stablecoins, RPC health, plus gas, ABI, tx decoder, Merkle, storage slots and more.",
  "Blockchain Lab Tools", "Free developer utilities that run entirely in your browser against live public RPCs and APIs. No accounts, no tracking, no backend. Open source.",
  [("/","Blockchain Lab home"),("/tools","Blockchain Lab tools"),("/whitepaper","Whitepaper library"),("/learn/protocol-atlas","Protocol atlas"),("/forge/composer","Constructor")], home_body, "", depth=0))
+# sitemap + robots
+urls = [f"{BASE}/"] + [f"{BASE}/{k}/" for k,_ in ALLNAV]
+open("sitemap.xml","w").write('<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">' + "".join(f"<url><loc>{u}</loc></url>" for u in urls) + "</urlset>\n")
+open("robots.txt","w").write(f"User-agent: *\nAllow: /\nSitemap: {BASE}/sitemap.xml\n")
 print("pages:", len(P)+1)

@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://blockchains.github.io/blockchainlab-tools/sitemap.xml

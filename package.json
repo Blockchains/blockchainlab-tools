@@ -2,7 +2,19 @@
   "name": "blockchainlab-tools",
   "private": true,
   "type": "module",
-  "description": "Client-side blockchain developer tools. Built by Blockchain Lab — https://blockchainlab.com",
-  "scripts": { "test": "node test/core.test.mjs" },
-  "devDependencies": { "ethers": "6.13.4", "@openzeppelin/merkle-tree": "1.0.8" }
+  "description": "Client-side blockchain developer tools. Built by Blockchain Lab \u2014 https://blockchainlab.com",
+  "scripts": {
+    "test": "node test/core.test.mjs && node test/core2.test.mjs",
+    "test:core": "node test/core.test.mjs",
+    "test:pack2": "node test/core2.test.mjs",
+    "build": "python3 gen_pages.py",
+    "e2e": "python3 test/e2e.py"
+  },
+  "devDependencies": {
+    "@openzeppelin/merkle-tree": "1.0.8",
+    "ethers": "6.13.4",
+    "@scure/btc-signer": "2.0.1",
+    "@scure/base": "2.0.0",
+    "@noble/curves": "2.0.1"
+  }
 }
